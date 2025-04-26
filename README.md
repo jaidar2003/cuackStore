@@ -66,44 +66,74 @@ REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
 
 ## Setup and Installation
 
-### Backend (Spring Boot)
+### Backend (Spring Boot) - The Server Part
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/cuakstore.git
-   cd cuakstore
-   ```
+This part makes the website's brain work. You need Java 21 installed first!
 
-2. Build the project:
-   ```
-   ./gradlew build
-   ```
+1.  **Get the Code:**
+   *   Make sure you have the project code downloaded (cloned).
 
-3. Run the application:
-   ```
-   ./gradlew bootRun
-   ```
+2.  **Set Up Secrets (Important!):**
+   *   Find the main project folder (the one with `build.gradle` in it).
+   *   You need a file named `.env` in this folder. Ask your friend for the content, or copy it from the "Environment Variables" -> "Backend (Spring Boot)" section above and fill in the secrets (like database passwords, Google keys, etc.). **The backend won't work without this!**
 
-The backend server will start on http://localhost:8080.
+3.  **Open Your Terminal:**
+   *   Navigate into the main project folder using your terminal (e.g., `cd path/to/cuakstore`).
 
-### Frontend (React TypeScript)
+4.  **Run the Magic Command:**
+   *   Type this command and press Enter:
+       ```bash
+       ./gradlew bootRun
+       ```
+   *   This tells Gradle (the build tool) to start the Spring Boot application.
+   *   It might download some things the first time. Be patient!
 
-1. Navigate to the frontend directory:
-   ```
-   cd frontend
-   ```
+5.  **Check if it Worked:**
+   *   You'll see a lot of text in the terminal. Look for lines near the end that say something like `Tomcat started on port(s): 8080` or `Started CuakstoreApplication`.
+   *   If you see that, the backend is running! It's usually accessible at `http://localhost:8080`, but the frontend part (the website you see) needs to be running too to interact with it fully.
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+**To Stop the Backend:**
 
-3. Start the development server:
-   ```
-   npm start
-   ```
+*   Go back to the terminal where it's running and press `Ctrl + C`.
 
-The frontend development server will start on http://localhost:3000.
+### Frontend (React TypeScript) - The Website Part
+
+This is the actual website you see and click on in your browser. You need Node.js and npm installed first!
+
+1.  **Get the Code:**
+   *   Make sure you have the project code downloaded (cloned).
+
+2.  **Set Up Secrets (If needed):**
+   *   Go into the `frontend` folder inside the main project.
+   *   Look for a file named `.env`. If it's not there, you might need to create it.
+   *   Copy the content from the "Environment Variables" -> "Frontend (React)" section above into this file. You'll need the `REACT_APP_GOOGLE_CLIENT_ID` from your friend or your own setup.
+
+3.  **Open Your Terminal:**
+   *   Navigate *into the `frontend` folder* using your terminal (e.g., `cd path/to/cuakstore/frontend`).
+
+4.  **Install Necessary Stuff (First time only):**
+   *   Type this command and press Enter:
+       ```bash
+       npm install --legacy-peer-deps
+       ```
+   *   This downloads all the code bits the frontend needs to work. It might take a few minutes. The `--legacy-peer-deps` flag helps avoid potential conflicts between different package versions.
+
+5.  **Run the Magic Command:**
+   *   Type this command and press Enter:
+       ```bash
+       npm start
+       ```
+   *   This starts a local web server just for development.
+
+6.  **Check if it Worked:**
+   *   Your web browser should automatically open a new tab showing the CuakStore website (usually at `http://localhost:3000`).
+   *   You'll see messages in your terminal. If it says something like `Compiled successfully!` and `You can now view frontend in the browser`, it's working!
+   *   Keep this terminal open while you're working on the frontend.
+
+**To Stop the Frontend:**
+
+*   Go back to the terminal where it's running (the one you used `npm start` in) and press `Ctrl + C`.
+
 
 ## Production Deployment
 
