@@ -13,6 +13,7 @@ import com.example.cuakstore.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException; // Import specific exceptions
 
 import javax.crypto.SecretKey;
 
@@ -30,10 +31,10 @@ public class JwtUtils {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
 
         return Jwts.builder()
-                .subject(userPrincipal.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key())
+                .setSubject(userPrincipal.getUsername()) // Use setSubject
+                .setIssuedAt(new Date()) // Use setIssuedAt
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs)) // Use setExpiration
+                .signWith(key(), SignatureAlgorithm.HS512) // Specify the algorithm explicitly if needed, or signWith(key()) might infer
                 .compact();
     }
 
@@ -42,14 +43,18 @@ public class JwtUtils {
     }
 
     public String getUserNameFromJwtToken(String token) {
-        return Jwts.parser().verifyWith(key()).build()
-                .parseSignedClaims(token).getPayload().getSubject();
+        // Updated parser logic
+        return Jwts.parserBuilder().setSigningKey(key()).build()
+                .parseClaimsJws(token).getBody().getSubject();
     }
 
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parser().verifyWith(key()).build().parseSignedClaims(authToken);
+            // Updated parser logic
+            Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
             return true;
+        } catch (SignatureException e) { // More specific exception
+            logger.error("Invalid JWT signature: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {

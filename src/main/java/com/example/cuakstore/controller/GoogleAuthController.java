@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; // Import this
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,8 +43,9 @@ public class GoogleAuthController {
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    // AuthenticationManager might not be strictly needed for this flow if you don't authenticate via username/password
+    // @Autowired
+    // private AuthenticationManager authenticationManager;
 
     @Autowired
     private UserRepository userRepository;
@@ -61,7 +63,7 @@ public class GoogleAuthController {
     public ResponseEntity<?> authenticateWithGoogle(@RequestBody GoogleAuthRequest authRequest) {
         try {
             // Verify the Google ID token
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance()) // Use default JacksonFactory instance
                     .setAudience(Collections.singletonList(googleClientId))
                     .build();
 
@@ -74,31 +76,44 @@ public class GoogleAuthController {
             Payload payload = idToken.getPayload();
             String email = payload.getEmail();
             String name = (String) payload.get("name");
-            String pictureUrl = (String) payload.get("picture");
-            String googleId = payload.getSubject();
+            // String pictureUrl = (String) payload.get("picture"); // Available if needed
+            // String googleId = payload.getSubject(); // Available if needed
 
-            // Check if user exists by email
-            User user = userRepository.findByEmail(email).orElse(null);
-            if (user == null) {
-                // Create a new user
+            // Check if user exists by email, or create a new one
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                // Create a new user if not found
                 String username = email.split("@")[0] + "_" + UUID.randomUUID().toString().substring(0, 8);
+                // Generate a secure random password (OAuth users might not need a traditional password)
                 String randomPassword = UUID.randomUUID().toString();
-                user = new User(username, email, passwordEncoder.encode(randomPassword));
-                
+                User newUser = new User(username, email, passwordEncoder.encode(randomPassword));
+
                 // Assign default role (USER)
                 Set<Role> roles = new HashSet<>();
                 Role userRole = roleRepository.findByName(ERole.ROLE_USER)
                         .orElseThrow(() -> new RuntimeException("Error: Role not found."));
                 roles.add(userRole);
-                user.setRoles(roles);
-                
-                // Save user
-                userRepository.save(user);
-            }
+                newUser.setRoles(roles);
 
-            // Create authentication token
-            String jwt = jwtUtils.generateJwtToken(user.getUsername());
-            
+                // Save new user
+                return userRepository.save(newUser);
+            });
+
+            // --- Start of changes ---
+            // Create UserDetails for the authenticated user
+            // Ensure UserDetailsImpl has a static build(User user) method or adjust accordingly
+            UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+
+            // Create Authentication object using UserDetails
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+
+            // Optionally set the authentication in the security context
+            // SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Generate JWT token using the Authentication object
+            String jwt = jwtUtils.generateJwtToken(authentication);
+            // --- End of changes ---
+
             // Get user roles
             List<String> roles = user.getRoles().stream()
                     .map(role -> role.getName().name())
@@ -113,7 +128,13 @@ public class GoogleAuthController {
                     roles));
 
         } catch (GeneralSecurityException | IOException e) {
-            return ResponseEntity.badRequest().body("Error verifying Google token: " + e.getMessage());
+            // Log the exception for better debugging
+            // logger.error("Error verifying Google token", e);
+            return ResponseEntity.status(500).body("Error verifying Google token: " + e.getMessage());
+        } catch (RuntimeException e) {
+            // Catch potential RuntimeExceptions like "Role not found"
+            // logger.error("Error during Google authentication", e);
+            return ResponseEntity.status(500).body("An internal error occurred: " + e.getMessage());
         }
     }
 }
